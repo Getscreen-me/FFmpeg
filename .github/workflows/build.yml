@@ -7,28 +7,15 @@ on:
         required: true
         type: string
         default: n9.0
-  workflow_call:
-    inputs:
-      branch-name:
-        required: false
-        type: string
-        default: n9.0
-    outputs:
-      artifact-name:
-        description: Имя артефакта с бинарником ffmpeg
-        value: ${{ jobs.build.outputs.artifact-name }}
 
 jobs:
   build:
     runs-on: [ self-hosted, Linux, X64 ]
-    outputs:
-      artifact-name: ${{ steps.meta.outputs.artifact-name }}
 
     steps:
       - name: Checkout FFmpeg
         uses: actions/checkout@v4
         with:
-          repository: getscreen-me/ffmpeg
           ref: ${{ inputs.branch-name }}
           fetch-depth: 0
           fetch-tags: true
@@ -186,13 +173,8 @@ jobs:
           make -j$(nproc)
           strip ffmpeg
 
-      - name: Artifact name
-        id: meta
-        run: echo "artifact-name=ffmpeg-${{ inputs.branch-name }}-linux" >> "$GITHUB_OUTPUT"
-
       - name: Upload ffmpeg
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.meta.outputs.artifact-name }}
+          name: ffmpeg-${{ inputs.branch-name }}-linux
           path: ffmpeg
-          if-no-files-found: error
