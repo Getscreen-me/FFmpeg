@@ -90,6 +90,10 @@ build:
 
     - make -j$(nproc)
     - strip ffmpeg
+    - |
+      curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        --upload-file ffmpeg \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/ffmpeg/${BRANCH_NAME}/ffmpeg"
 
   artifacts:
     name: "ffmpeg-${BRANCH_NAME}-linux"
