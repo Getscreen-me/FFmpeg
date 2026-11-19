@@ -9,6 +9,7 @@ workflow:
   rules:
     # аналог workflow_dispatch: только ручной запуск из веб-интерфейса
     - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
 
 build:
   stage: build
