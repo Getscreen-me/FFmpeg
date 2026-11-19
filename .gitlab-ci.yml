@@ -1,0 +1,101 @@
+variables:
+  BRANCH_NAME:
+    value: "n9.0"
+    description: "Ветка или тег FFmpeg для сборки"
+  GIT_DEPTH: "0"                       # аналог fetch-depth: 0
+  GIT_FETCH_EXTRA_FLAGS: "--tags --force"  # аналог fetch-tags: true
+
+workflow:
+  rules:
+    # аналог workflow_dispatch: только ручной запуск из веб-интерфейса
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+build:
+  stage: build
+  tags:
+    - self-hosted
+    - Linux
+    - X64
+  script:
+    - git fetch --tags origin
+    - git checkout "$BRANCH_NAME"
+
+    - sudo apt-get update
+    - sudo apt-get install -y build-essential pkg-config yasm nasm
+
+    # Запускаем конфигуратор FFmpeg и генерируем Makefile.
+    # --disable-everything: отключить все компоненты.
+    # --disable-programs / --enable-ffmpeg: собрать только утилиту ffmpeg.
+    # --disable-ffplay, --disable-ffprobe: без плеера и анализатора.
+    # --disable-doc, --disable-*pages: без документации.
+    # --disable-debug: без отладочной информации.
+    # --disable-network, --disable-protocols + --enable-protocol=file:
+    #   только локальные файлы.
+    # --disable-autodetect: не искать внешние библиотеки в системе.
+    # --disable-indevs / --disable-outdevs: без устройств ввода/вывода.
+    # --disable-filters, --disable-bsfs, --disable-hwaccels.
+    # --disable-iconv/zlib/bzlib/lzma: без внешних зависимостей.
+    # --disable-swscale/swresample/avdevice: без лишних библиотек.
+    # --disable-gpl / --disable-version3: только LGPL v2.1.
+    # --enable-demuxer=mov,matroska,ogg: чтение MP4/MOV, MKV/WebM, OGG.
+    # --enable-muxer=mp4: запись MP4.
+    # Парсеры: h264, hevc, vp8, vp9, aac, opus, vorbis.
+    - |
+      ./configure \
+        --prefix="$CI_PROJECT_DIR/build" \
+        --disable-everything \
+        --disable-programs \
+        --disable-filters \
+        --disable-bsfs \
+        --disable-protocols \
+        --disable-demuxers \
+        --disable-muxers \
+        --disable-parsers \
+        --disable-encoders \
+        --disable-decoders \
+        --enable-ffmpeg \
+        --disable-ffplay \
+        --disable-ffprobe \
+        --disable-doc \
+        --disable-debug \
+        --disable-network \
+        --disable-autodetect \
+        --disable-indevs \
+        --disable-outdevs \
+        --disable-hwaccels \
+        --disable-iconv \
+        --disable-zlib \
+        --disable-bzlib \
+        --disable-lzma \
+        --disable-shared \
+        --disable-swscale \
+        --disable-swresample \
+        --disable-avdevice \
+        --disable-gpl \
+        --disable-version3 \
+        --disable-htmlpages \
+        --disable-manpages \
+        --disable-podpages \
+        --disable-txtpages \
+        --enable-static \
+        --enable-protocol=file \
+        --enable-demuxer=mov \
+        --enable-demuxer=matroska \
+        --enable-demuxer=ogg \
+        --enable-muxer=mp4 \
+        --enable-parser=h264 \
+        --enable-parser=hevc \
+        --enable-parser=vp8 \
+        --enable-parser=vp9 \
+        --enable-parser=aac \
+        --enable-parser=opus \
+        --enable-parser=vorbis
+
+    - make -j$(nproc)
+    - strip ffmpeg
+
+  artifacts:
+    name: "ffmpeg-${BRANCH_NAME}-linux"
+    paths:
+      - ffmpeg
+    expire_in: 30 days
