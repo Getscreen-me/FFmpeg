@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - 'n*'
   workflow_dispatch:
 
 jobs:
@@ -28,11 +30,31 @@ jobs:
         run: |
           set -e
 
-          for branch in master develop pre-release; do
+          for branch in master; do
             if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
               echo "Pushing branch: $branch"
               git push gitlab "refs/remotes/origin/$branch:refs/heads/$branch"
             else
               echo "Branch $branch not found in origin, skipping"
+            fi
+          done
+
+      - name: Push selected tags
+        run: |
+          set -e
+
+          # при пуше тега берём его из события, иначе список по умолчанию
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tags="${{ github.ref_name }}"
+          else
+            tags="n9.0"
+          fi
+
+          for tag in $tags; do
+            if git show-ref --verify --quiet "refs/tags/$tag"; then
+              echo "Pushing tag: $tag"
+              git push gitlab "refs/tags/$tag:refs/tags/$tag"
+            else
+              echo "Tag $tag not found, skipping"
             fi
           done
